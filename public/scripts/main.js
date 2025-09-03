@@ -1,5 +1,6 @@
 let allVideos = [];
 let filteredVideos = [];
+let isStreaming = false;
 
 // Format duration from PT37M46S to 37:46
 function formatDuration(duration) {
@@ -51,7 +52,7 @@ function createVideoCard(video) {
     snippet.thumbnails.medium || snippet.thumbnails.default;
 
   return `
-            <div class="video-card">
+            <div class="video-card" id="video-${videoId}">
                 <div class="video-thumbnail">
                     <img src="${thumbnail.url}" alt="${
     snippet.title
@@ -87,6 +88,61 @@ function createVideoCard(video) {
         `;
 }
 
+// Add video to grid with animation
+function addVideoToGrid(video) {
+  const grid = document.getElementById("videosGrid");
+  const videoCard = createVideoCard(video);
+  
+  // Create a temporary div to hold the new video
+  const tempDiv = document.createElement('div');
+  tempDiv.innerHTML = videoCard;
+  const newVideoElement = tempDiv.firstElementChild;
+  
+  // Add animation class
+  newVideoElement.style.opacity = '0';
+  newVideoElement.style.transform = 'translateY(20px)';
+  
+  grid.appendChild(newVideoElement);
+  
+  // Trigger animation
+  setTimeout(() => {
+    newVideoElement.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+    newVideoElement.style.opacity = '1';
+    newVideoElement.style.transform = 'translateY(0)';
+  }, 50);
+}
+
+// Update progress display
+function updateProgress(progress) {
+  const statsDiv = document.getElementById("stats");
+  const loadingDiv = document.getElementById("loading");
+  
+  let message = progress.message || "Loading...";
+  
+  if (progress.stage === 'videos_progress' && progress.totalFetched !== undefined) {
+    message = `Fetched ${progress.totalFetched} videos so far... (Page ${progress.page})`;
+  }
+  
+  loadingDiv.innerHTML = `
+    <div class="loading-container">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">${message}</div>
+      ${progress.totalFetched ? `<div class="loading-count">Videos loaded: ${progress.totalFetched}</div>` : ''}
+    </div>
+  `;
+  
+  if (progress.channelInfo) {
+    statsDiv.innerHTML = `
+      <h2>📊 Channel Statistics</h2>
+      <p>Channel: ${progress.channelInfo.title}</p>
+      <p>Subscribers: ${parseInt(progress.channelInfo.subscriberCount).toLocaleString()}</p>
+      <p>Total Channel Videos: ${parseInt(progress.channelInfo.videoCount).toLocaleString()}</p>
+      <p>Videos Loaded: ${allVideos.length}</p>
+    `;
+    statsDiv.style.display = "block";
+  }
+}
+
 // Filter videos based on search term
 function filterVideos(searchTerm) {
   if (!searchTerm.trim()) {
@@ -116,7 +172,112 @@ function renderVideos() {
   grid.innerHTML = filteredVideos.map(createVideoCard).join("");
 }
 
-// Load and display videos
+// Streaming video loader
+async function loadVideosStream(channelInput) {
+  if (!channelInput || !channelInput.trim()) {
+    document.getElementById("error").innerHTML = "Please enter a channel name or URL";
+    document.getElementById("error").style.display = "block";
+    return;
+  }
+
+  if (isStreaming) {
+    console.log("Already streaming, ignoring request");
+    return;
+  }
+
+  isStreaming = true;
+  allVideos = [];
+  filteredVideos = [];
+
+  // Reset UI
+  document.getElementById("loading").style.display = "block";
+  document.getElementById("error").style.display = "none";
+  document.getElementById("stats").style.display = "none";
+  document.getElementById("searchInput").style.display = "none";
+  document.getElementById("videosGrid").innerHTML = "";
+
+  try {
+    const eventSource = new EventSource(`/api/videos/stream?channel=${encodeURIComponent(channelInput)}`);
+    
+    eventSource.onmessage = function(event) {
+      const data = JSON.parse(event.data);
+      
+      switch (data.type) {
+        case 'connected':
+          console.log('Stream connected');
+          break;
+          
+        case 'progress':
+          updateProgress(data);
+          break;
+          
+        case 'video':
+          allVideos.push(data.video);
+          filteredVideos.push(data.video);
+          addVideoToGrid(data.video);
+          
+          // Update stats if visible
+          if (document.getElementById("stats").style.display !== "none") {
+            const statsContent = document.getElementById("stats").innerHTML;
+            const updatedStats = statsContent.replace(
+              /Videos Loaded: \d+/,
+              `Videos Loaded: ${allVideos.length}`
+            );
+            document.getElementById("stats").innerHTML = updatedStats;
+          }
+          break;
+          
+        case 'complete':
+          console.log('Stream completed');
+          document.getElementById("loading").style.display = "none";
+          document.getElementById("searchInput").style.display = "block";
+          
+          // Final stats update
+          if (data.channelInfo) {
+            document.getElementById("stats").innerHTML = `
+              <h2>📊 Channel Statistics</h2>
+              <p>Channel: ${data.channelInfo.title}</p>
+              <p>Subscribers: ${parseInt(data.channelInfo.subscriberCount).toLocaleString()}</p>
+              <p>Total Channel Videos: ${parseInt(data.channelInfo.videoCount).toLocaleString()}</p>
+              <p>Videos Loaded: ${allVideos.length}</p>
+              <p>✅ Stream completed successfully!</p>
+            `;
+          }
+          
+          eventSource.close();
+          isStreaming = false;
+          break;
+          
+        case 'error':
+          console.error('Stream error:', data.message);
+          document.getElementById("loading").style.display = "none";
+          document.getElementById("error").innerHTML = `Error: ${data.message}`;
+          document.getElementById("error").style.display = "block";
+          eventSource.close();
+          isStreaming = false;
+          break;
+      }
+    };
+    
+    eventSource.onerror = function(event) {
+      console.error('EventSource failed:', event);
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("error").innerHTML = "Connection to server lost. Please try again.";
+      document.getElementById("error").style.display = "block";
+      eventSource.close();
+      isStreaming = false;
+    };
+    
+  } catch (error) {
+    console.error("Error setting up stream:", error);
+    document.getElementById("loading").style.display = "none";
+    document.getElementById("error").innerHTML = `Error: ${error.message}`;
+    document.getElementById("error").style.display = "block";
+    isStreaming = false;
+  }
+}
+
+// Load and display videos (non-streaming fallback)
 async function loadVideos(channelInput) {
   if (!channelInput || !channelInput.trim()) {
     document.getElementById("error").innerHTML =
@@ -174,7 +335,7 @@ document.getElementById("fetchButton").addEventListener("click", () => {
   const channelInput = document
     .getElementById("channelInput")
     .value.trim();
-  loadVideos(channelInput);
+  loadVideosStream(channelInput);
 });
 
 // Allow Enter key to trigger fetch
@@ -185,7 +346,7 @@ document
       const channelInput = document
         .getElementById("channelInput")
         .value.trim();
-      loadVideos(channelInput);
+      loadVideosStream(channelInput);
     }
   });
 
