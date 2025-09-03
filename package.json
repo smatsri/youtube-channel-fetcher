@@ -4,8 +4,7 @@
   "description": "Fetch all videos from a YouTube channel using the YouTube Data API",
   "main": "youtube-videos.js",
   "scripts": {
-    "start": "node youtube-videos.js",
-    "server": "node server.js",
+    "start": "node server.js",
     "dev": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },

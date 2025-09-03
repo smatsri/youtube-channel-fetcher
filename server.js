@@ -1,5 +1,7 @@
+require("dotenv").config();
 const express = require("express");
 const path = require("path");
+const { fetchYoutubeVideos } = require("./lib/youtube-videos");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -12,6 +14,12 @@ app.use("/output", express.static(path.join(__dirname, "output")));
 // Route for the main page
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// Route for the API
+app.get("/api/videos", async (req, res) => {
+  const videos = await fetchYoutubeVideos(req.query.channel);
+  res.json(videos);
 });
 
 // Health check endpoint
