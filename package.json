@@ -1,0 +1,26 @@
+{
+  "name": "youtube-channel-fetcher",
+  "version": "1.0.0",
+  "description": "Fetch all videos from a YouTube channel using the YouTube Data API",
+  "main": "youtube-videos.js",
+  "scripts": {
+    "start": "node youtube-videos.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "youtube",
+    "api",
+    "videos",
+    "channel",
+    "data-fetching"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "dotenv": "^17.2.2",
+    "googleapis": "^128.0.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
