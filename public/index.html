@@ -65,6 +65,42 @@
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
       }
 
+      .channel-input-container {
+        margin-bottom: 30px;
+        text-align: center;
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+
+      .fetch-button {
+        background: linear-gradient(45deg, #4caf50, #45a049);
+        color: white;
+        border: none;
+        padding: 12px 25px;
+        border-radius: 25px;
+        cursor: pointer;
+        font-weight: 600;
+        font-size: 16px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      }
+
+      .fetch-button:hover {
+        background: linear-gradient(45deg, #45a049, #4caf50);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+      }
+
+      .fetch-button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+      }
+
       .videos-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -220,10 +256,20 @@
     <div class="container">
       <div class="header">
         <h1>�� Amber Reacts</h1>
-        <p>YouTube Channel Videos</p>
+        <p>Enter a channel name or URL to view their videos</p>
       </div>
 
-      <div class="stats" id="stats">
+      <div class="channel-input-container">
+        <input
+          type="text"
+          class="search-input"
+          id="channelInput"
+          placeholder="Enter channel name, URL, or @username (e.g., @AmberReacts24)"
+        />
+        <button id="fetchButton" class="fetch-button">Fetch Videos</button>
+      </div>
+
+      <div class="stats" id="stats" style="display: none">
         <h2>Loading...</h2>
       </div>
 
@@ -233,6 +279,7 @@
           class="search-input"
           id="searchInput"
           placeholder="Search videos..."
+          style="display: none"
         />
       </div>
 
@@ -367,41 +414,88 @@
       }
 
       // Load and display videos
-      async function loadVideos() {
+      async function loadVideos(channelInput) {
+        if (!channelInput || !channelInput.trim()) {
+          document.getElementById("error").innerHTML =
+            "Please enter a channel name or URL";
+          document.getElementById("error").style.display = "block";
+          return;
+        }
+
         try {
-          const response = await fetch("./output/videos_Amber_Reacts.json");
+          // Show loading state
+          document.getElementById("loading").style.display = "block";
+          document.getElementById("error").style.display = "none";
+          document.getElementById("stats").style.display = "none";
+          document.getElementById("searchInput").style.display = "none";
+          document.getElementById("videosGrid").innerHTML = "";
+          const response = await fetch(
+            `/api/videos?channel=${encodeURIComponent(channelInput)}`
+          );
           if (!response.ok) {
             throw new Error("Failed to load videos");
           }
 
-          const data = await response.json();
-          allVideos = data.videos || [];
+          const videos = await response.json();
+          if (!videos || videos.length === 0) {
+            throw new Error("No videos found for this channel");
+          }
+
+          allVideos = videos;
           filteredVideos = [...allVideos];
 
           // Update stats
           document.getElementById("stats").innerHTML = `
                     <h2>�� Channel Statistics</h2>
-                    <p>Total Videos: ${data.totalVideos || allVideos.length}</p>
-                    <p>Last Updated: ${formatDate(data.fetchedAt)}</p>
+                    <p>Total Videos: ${videos.length}</p>
+                    <p>Channel: ${videos[0]?.channelTitle || "Unknown"}</p>
                 `;
 
-          // Hide loading and show videos
+          // Show stats and search, hide loading
           document.getElementById("loading").style.display = "none";
+          document.getElementById("stats").style.display = "block";
+          document.getElementById("searchInput").style.display = "block";
           renderVideos();
         } catch (error) {
           console.error("Error loading videos:", error);
           document.getElementById("loading").style.display = "none";
+          document.getElementById(
+            "error"
+          ).innerHTML = `Error: ${error.message}`;
           document.getElementById("error").style.display = "block";
         }
       }
+
+      // Fetch button functionality
+      document.getElementById("fetchButton").addEventListener("click", () => {
+        const channelInput = document
+          .getElementById("channelInput")
+          .value.trim();
+        loadVideos(channelInput);
+      });
+
+      // Allow Enter key to trigger fetch
+      document
+        .getElementById("channelInput")
+        .addEventListener("keypress", (e) => {
+          if (e.key === "Enter") {
+            const channelInput = document
+              .getElementById("channelInput")
+              .value.trim();
+            loadVideos(channelInput);
+          }
+        });
 
       // Search functionality
       document.getElementById("searchInput").addEventListener("input", (e) => {
         filterVideos(e.target.value);
       });
 
-      // Load videos when page loads
-      document.addEventListener("DOMContentLoaded", loadVideos);
+      // Initialize page - don't load videos automatically
+      document.addEventListener("DOMContentLoaded", () => {
+        document.getElementById("loading").style.display = "none";
+        document.getElementById("error").style.display = "none";
+      });
     </script>
   </body>
 </html>
