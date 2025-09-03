@@ -199,6 +199,9 @@ Thumbs.db
 videos_*.json
 youtube_videos.json
 
+# Output directory for generated data
+output/
+
 # API keys and sensitive data
 config.json
 secrets.json

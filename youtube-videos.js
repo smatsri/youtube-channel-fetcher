@@ -229,14 +229,25 @@ class YouTubeChannelFetcher {
    */
   saveToFile(videos, filename = "youtube_videos.json") {
     const fs = require("fs");
+    const path = require("path");
+
+    // Ensure output directory exists
+    const outputDir = "output";
+    if (!fs.existsSync(outputDir)) {
+      fs.mkdirSync(outputDir, { recursive: true });
+    }
+
+    // Create full path in output directory
+    const fullPath = path.join(outputDir, filename);
+
     const data = {
       fetchedAt: new Date().toISOString(),
       totalVideos: videos.length,
       videos: videos,
     };
 
-    fs.writeFileSync(filename, JSON.stringify(data, null, 2));
-    console.log(`\n💾 Videos saved to ${filename}`);
+    fs.writeFileSync(fullPath, JSON.stringify(data, null, 2));
+    console.log(`\n💾 Videos saved to ${fullPath}`);
   }
 }
 
