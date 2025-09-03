@@ -1,20 +1,34 @@
 # YouTube Channel Video Fetcher
 
-A Node.js script to fetch all videos from a YouTube channel using the YouTube Data API v3.
+A comprehensive Node.js application that fetches and displays videos from YouTube channels using the YouTube Data API v3. Features both a web interface and programmatic API for retrieving channel videos with detailed statistics.
 
-<!-- Test comment for commit message rule -->
+## 🚀 Features
 
-## Features
+- ✅ **Web Interface**: Beautiful, responsive web UI for browsing channel videos
+- ✅ **REST API**: Programmatic access via HTTP endpoints
+- ✅ **Flexible Input**: Support for channel URLs, usernames, or channel IDs
+- ✅ **Comprehensive Data**: Video details, statistics, thumbnails, and metadata
+- ✅ **Smart Pagination**: Automatic handling of large channels
+- ✅ **Rate Limiting**: Built-in API quota management
+- ✅ **Search & Filter**: Real-time video search and filtering
+- ✅ **Export Capability**: Save results to JSON files
+- ✅ **Error Handling**: Robust error handling and user feedback
 
-- ✅ Fetch all videos from any YouTube channel
-- ✅ Support for channel ID, username, or channel URL
-- ✅ Automatic pagination handling for large channels
-- ✅ Detailed video information including statistics
-- ✅ Rate limiting and error handling
-- ✅ Export results to JSON file
-- ✅ Channel information display
+## 📁 Project Structure
 
-## Setup
+```
+├── lib/
+│   ├── fetcher.js          # Core YouTube API wrapper class
+│   └── youtube-videos.js   # Main video fetching module
+├── public/
+│   └── index.html          # Web interface
+├── output/                 # Generated JSON files
+├── server.js              # Express server and API endpoints
+├── package.json           # Dependencies and scripts
+└── README.md              # This file
+```
+
+## 🛠️ Setup
 
 ### 1. Install Dependencies
 
@@ -30,37 +44,81 @@ npm install
 4. Create credentials (API Key)
 5. Copy your API key
 
-### 3. Configure the Script
+### 3. Configure Environment Variables
 
-Open `youtube-videos.js` and replace `YOUR_YOUTUBE_API_KEY_HERE` with your actual API key:
+Create a `.env` file in the project root:
 
-```javascript
-const API_KEY = "your_actual_api_key_here";
+```env
+YOUTUBE_API_KEY=your_actual_api_key_here
+PORT=3000
 ```
 
-## Usage
+## 🚀 Usage
 
-### Basic Usage
+### Web Interface
+
+Start the server and open your browser:
 
 ```bash
 npm start
 ```
 
+Then visit `http://localhost:3000` to use the web interface.
+
+**Features:**
+
+- Enter any channel URL, username, or @handle
+- Browse videos in a responsive grid layout
+- Search and filter videos in real-time
+- View detailed video statistics
+- Direct links to YouTube videos
+
+### API Endpoints
+
+#### `GET /api/videos?channel={channelInput}`
+
+Fetch videos from a YouTube channel.
+
+**Parameters:**
+
+- `channel` (string): Channel URL, username, or channel ID
+
+**Example:**
+
+```bash
+curl "http://localhost:3000/api/videos?channel=@mkbhd"
+```
+
+#### `GET /health`
+
+Health check endpoint.
+
+**Response:**
+
+```json
+{
+  "status": "OK",
+  "message": "Server is running",
+  "timestamp": "2024-01-15T10:30:00.000Z"
+}
+```
+
 ### Programmatic Usage
 
 ```javascript
-const YouTubeChannelFetcher = require("./youtube-videos.js");
+const {
+  YouTubeChannelFetcher,
+  fetchYoutubeVideos,
+} = require("./lib/youtube-videos");
 
-const fetcher = new YouTubeChannelFetcher("your_api_key");
+// Simple usage
+const videos = await fetchYoutubeVideos("@mkbhd");
 
-// Get channel ID from various formats
-const channelId = await fetcher.getChannelId("@mkbhd"); // Username
-// or
-const channelId = await fetcher.getChannelId("UCBJycsmduvYEL83R_U4JriQ"); // Channel ID
-// or
-const channelId = await fetcher.getChannelId("https://www.youtube.com/@mkbhd"); // URL
+// Advanced usage with custom options
+const fetcher = new YouTubeChannelFetcher(process.env.YOUTUBE_API_KEY);
 
-// Fetch all videos
+const channelId = await fetcher.getChannelId("https://www.youtube.com/@mkbhd");
+const channelInfo = await fetcher.getChannelInfo(channelId);
 const videos = await fetcher.getAllChannelVideos(channelId, {
   maxResults: 50,
   order: "date",
@@ -71,115 +129,188 @@ const videos = await fetcher.getAllChannelVideos(channelId, {
 fetcher.saveToFile(videos, "my_channel_videos.json");
 ```
 
-## API Reference
+## 📚 API Reference
 
-### YouTubeChannelFetcher
+### YouTubeChannelFetcher Class
 
 #### Constructor
 
-- `new YouTubeChannelFetcher(apiKey)` - Initialize with your YouTube API key
+```javascript
+new YouTubeChannelFetcher(apiKey);
+```
 
 #### Methods
 
 ##### `getChannelId(input)`
 
-Get channel ID from username, channel ID, or channel URL.
+Resolve channel ID from various input formats.
 
 **Parameters:**
 
-- `input` (string): Channel username, ID, or URL
+- `input` (string): Channel URL, username, or channel ID
 
-**Returns:** Promise<string> - Channel ID
+**Returns:** `Promise<string>` - Channel ID
+
+**Supported formats:**
+
+- `@username` - YouTube handle
+- `https://www.youtube.com/@username` - Full URL
+- `https://www.youtube.com/channel/UC...` - Channel URL
+- `UC...` - Direct channel ID
 
 ##### `getChannelInfo(channelId)`
 
-Get detailed channel information.
+Get comprehensive channel information.
 
 **Parameters:**
 
 - `channelId` (string): YouTube channel ID
 
-**Returns:** Promise<Object> - Channel information
+**Returns:** `Promise<Object>` - Channel details including subscriber count, video count, etc.
 
 ##### `getAllChannelVideos(channelId, options)`
 
-Fetch all videos from a channel.
+Fetch all videos from a channel with pagination.
 
 **Parameters:**
 
 - `channelId` (string): YouTube channel ID
-- `options` (Object): Optional configuration
+- `options` (Object): Configuration options
   - `maxResults` (number): Videos per page (max 50, default 50)
-  - `order` (string): Sort order - 'date', 'rating', 'relevance', 'title', 'videoCount', 'viewCount' (default 'date')
+  - `order` (string): Sort order - 'date', 'rating', 'relevance', 'title', 'videoCount', 'viewCount'
   - `publishedAfter` (string): ISO 8601 date string
   - `publishedBefore` (string): ISO 8601 date string
   - `includeDetails` (boolean): Include detailed video stats (default true)
 
-**Returns:** Promise<Array> - Array of video objects
+**Returns:** `Promise<Array>` - Array of video objects
 
 ##### `saveToFile(videos, filename)`
 
-Save videos to JSON file.
+Save video data to JSON file.
 
 **Parameters:**
 
 - `videos` (Array): Array of video objects
 - `filename` (string): Output filename (default 'youtube_videos.json')
 
-## Example Output
+### fetchYoutubeVideos Function
 
-The script will create a JSON file with the following structure:
+Convenience function for simple video fetching.
+
+```javascript
+const videos = await fetchYoutubeVideos(channelInput);
+```
+
+## 📊 Data Structure
+
+### Video Object
 
 ```json
 {
-  "fetchedAt": "2024-01-15T10:30:00.000Z",
-  "totalVideos": 1250,
-  "videos": [
-    {
-      "id": {
-        "kind": "youtube#video",
-        "videoId": "abc123"
-      },
-      "snippet": {
-        "publishedAt": "2024-01-15T08:00:00Z",
-        "title": "Video Title",
-        "description": "Video description...",
-        "thumbnails": {
-          "default": {
-            "url": "https://..."
-          }
-        }
-      },
-      "statistics": {
-        "viewCount": "1000000",
-        "likeCount": "50000",
-        "commentCount": "1000"
-      }
-    }
-  ]
+  "id": "video_id",
+  "title": "Video Title",
+  "description": "Video description...",
+  "publishedAt": "2024-01-15T08:00:00Z",
+  "thumbnail": "https://...",
+  "duration": "PT10M30S",
+  "viewCount": "1000000",
+  "likeCount": "50000",
+  "commentCount": "1000",
+  "tags": ["tag1", "tag2"],
+  "channelTitle": "Channel Name",
+  "channelId": "UC..."
 }
 ```
 
-## Rate Limits
+### Channel Object
 
-The YouTube Data API has quotas and rate limits:
+```json
+{
+  "id": "UC...",
+  "title": "Channel Name",
+  "description": "Channel description...",
+  "thumbnail": "https://...",
+  "subscriberCount": "1000000",
+  "videoCount": "500",
+  "viewCount": "100000000"
+}
+```
 
-- 10,000 units per day (default)
-- Each search request costs 100 units
-- Each video details request costs 1 unit
+## ⚡ Performance & Limits
 
-The script includes automatic delays to respect rate limits.
+### YouTube API Quotas
 
-## Error Handling
+- **Default quota**: 10,000 units per day
+- **Search requests**: 100 units each
+- **Video details**: 1 unit each
+- **Channel info**: 1 unit each
 
-The script includes comprehensive error handling for:
+### Built-in Optimizations
 
-- Invalid API keys
-- Channel not found
-- Network errors
-- API quota exceeded
-- Rate limiting
+- Automatic rate limiting with delays
+- Efficient pagination handling
+- Batch video detail requests
+- Error retry mechanisms
 
-## License
+## 🔧 Configuration
 
-MIT
+### Environment Variables
+
+```env
+YOUTUBE_API_KEY=your_api_key_here
+PORT=3000
+NODE_ENV=development
+```
+
+### Server Configuration
+
+The Express server can be configured via environment variables:
+
+- `PORT`: Server port (default: 3000)
+- `NODE_ENV`: Environment mode
+
+## 🚨 Error Handling
+
+The application handles various error scenarios:
+
+- **Invalid API Key**: Clear error messages for authentication issues
+- **Channel Not Found**: Graceful handling of non-existent channels
+- **Rate Limiting**: Automatic delays and retry logic
+- **Network Issues**: Timeout and connection error handling
+- **API Quota Exceeded**: Informative quota limit messages
+
+## 🎨 Web Interface Features
+
+- **Responsive Design**: Works on desktop, tablet, and mobile
+- **Real-time Search**: Instant video filtering
+- **Video Cards**: Rich video information display
+- **Statistics**: View counts, likes, comments, and duration
+- **Direct Links**: One-click access to YouTube videos
+- **Loading States**: User-friendly loading indicators
+- **Error Messages**: Clear error communication
+
+## 📝 Scripts
+
+```bash
+npm start          # Start the web server
+npm run dev        # Start in development mode
+npm test           # Run tests (placeholder)
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## 📄 License
+
+MIT License - see LICENSE file for details.
+
+## 🔗 Links
+
+- [YouTube Data API v3 Documentation](https://developers.google.com/youtube/v3)
+- [Google Cloud Console](https://console.developers.google.com/)
+- [Express.js Documentation](https://expressjs.com/)
