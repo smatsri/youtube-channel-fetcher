@@ -5,6 +5,8 @@
   "main": "youtube-videos.js",
   "scripts": {
     "start": "node youtube-videos.js",
+    "server": "node server.js",
+    "dev": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
@@ -18,7 +20,8 @@
   "license": "MIT",
   "dependencies": {
     "dotenv": "^17.2.2",
-    "googleapis": "^128.0.0"
+    "googleapis": "^128.0.0",
+    "express": "^4.18.2"
   },
   "engines": {
     "node": ">=14.0.0"
